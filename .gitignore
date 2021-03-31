@@ -1,0 +1,4 @@
+development/
+build/
+.vscode/
+include/vaderSentiment.hpp.gch
