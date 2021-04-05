@@ -15,9 +15,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build and run benchmarks with Catch2
         run: |
-          cd test
-          g++-10 -std=c++20 -o outcomeTests.o outcomeTests.cc
-          ./outcomeTests.o | tee ../benchmark_result.txt
+          g++-10 -std=c++20 -o ./test/outcomeTests.o ./test/outcomeTests.cc
+          ./test/outcomeTests.o | tee ./benchmark_result.txt
       - name: Store benchmark result
         uses: rhysd/github-action-benchmark@v1
         with:
