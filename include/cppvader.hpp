@@ -1,5 +1,5 @@
-#ifndef INCLUDE_VADERSENTIMENT_HPP_
-#define INCLUDE_VADERSENTIMENT_HPP_
+#ifndef INCLUDE_CPPVADER_HPP_
+#define INCLUDE_CPPVADER_HPP_
 
 #define GOT_HERE std::cout << std::endl << "--> Got to " <<__func__ << ":" << __LINE__ << std::endl
 
@@ -757,4 +757,4 @@ namespace vader
     return valenceDictionary;
   }
 }
-#endif
+#endif // INCLUDE_CPPVADER_HPP_

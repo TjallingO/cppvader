@@ -1,4 +1,7 @@
 development/
-build/
 .vscode/
-include/vaderSentiment.hpp.gch
+googletest/
+trash/
+*.gch
+*.o
+*.sh

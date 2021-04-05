@@ -9,7 +9,7 @@ This is a C++ port of the [Valence Aware Dictionary and sEntiment Reasoner (VADE
     
 ## Minimal working example
 ```c++
-#include "include/vaderSentiment.hpp"
+#include "include/cppvader.hpp"
 
 int main()
 {
