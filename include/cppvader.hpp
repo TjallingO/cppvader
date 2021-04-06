@@ -15,7 +15,6 @@
 #include <ostream>
 
 // TODO LIST
-// - Change operator[] to .at
 // - Change most lower() usages to use pre-made lower container
 // - Text emoticions (e.g. :D) are not calculated properly. Investigate.
 // - Perhaps some free functions should be class members.
@@ -146,18 +145,6 @@ namespace vader
       return (container.find(keyword) != std::end(container));
     }
 
-    // Helper function to strip leading and trailing spaces
-    std::string strip(const std::string &input)
-    {
-      auto start_it = input.begin();
-      auto end_it = input.rbegin();
-      while (std::isspace(*start_it))
-          ++start_it;
-      while (std::isspace(*end_it))
-          ++end_it;
-      return std::string(start_it, end_it.base());
-    }
-
     // Helper function that returns lowercase version of string
     std::string lower(const std::string &input)
     {
@@ -167,8 +154,8 @@ namespace vader
       return lowerCaseWord;
     }
 
-
     // Helper function to check capitalisation word
+    // Required by both SentiText and SentimentIntensityAnalyser
     bool fullyUppercase(const std::string &word)
     {
       if (word.empty()) // Not sure if this is desired behaviour
@@ -179,84 +166,6 @@ namespace vader
           return false;
       }
       return true;
-    }
-
-    // Determine if the input contains negation words
-    // Needs to use premade lowercase container to be efficient
-    template <class T>
-    bool negated(const T &input, bool includeNT = true)
-    {
-      std::vector<std::string> inputWords;
-      for (auto &el : input) // WEIRD
-      {
-        inputWords.push_back(lower(input));
-      }
-      for (size_t idx = 0; idx != inputWords.size(); ++idx)
-      {
-        if (std::find(negateWords.begin(), negateWords.end(), inputWords[idx]) != negateWords.end())
-          return true;
-        if (includeNT && (inputWords.at(idx).find("n't") != std::string::npos))
-          return true;
-        // if (idx > 0 && inputWords[idx] == "least" && inputWords[idx - 1] != "at") // Commented out in the original
-        //   return true;
-      }
-      return false;
-    }
-
-    // Normalise the score to be between -1 and 1 using an alpha that approximates the max expected value
-    double normalise(double score, double alpha = 15)
-    {
-      double normalisedScore = score / std::sqrt((score * score) + alpha);
-
-      if (normalisedScore < -1.0)
-        return -1.0;
-      else if (normalisedScore > 1.0)
-        return 1.0;
-      else
-        return normalisedScore;
-    }
-
-
-    // Check whether some words of the input are fully capitalised
-    template <class T>
-    bool allCapDifferential(const T &input)
-    {
-      bool isDifferent = false;
-      size_t allCapWords = 0;
-      for (auto &word : input)
-      {
-        for (size_t idx = 0; idx != word.size(); ++idx)
-        {
-          if (fullyUppercase(word))
-            ++allCapWords;
-        }
-      }
-      int capDifferential = input.size() - allCapWords;
-      if (0 < capDifferential < input.size())
-        isDifferent = true;
-      return isDifferent;
-    }
-
-    // Check if a certain word increase, decrease or negate valence
-    double scalarChange(const std::string &word, double valence, bool capDifferent)
-    {
-      double scalar = 0.0;
-      std::string wordLower = lower(word);
-      // If word is in booster dictionary
-      if (boosterDict.contains(wordLower)) // Needs testing. Expected behaviour likely.
-      {
-        scalar = boosterDict.at(wordLower);
-        if (valence < 0)
-          scalar *= -1;
-        if (fullyUppercase(word) && capDifferent)
-        {
-          if (valence > 0)
-            scalar += capsIncr;
-          else
-            scalar -= capsIncr;
-        }
-      }
-      return scalar;
     }
   } // End anonymous namespace
 
@@ -292,16 +201,40 @@ namespace vader
 
         // Helper function to split string into words.
         // Note that setting keepEmpty to false also handles multiple consecutive delimiters.
-        std::vector<std::string> splitIntoWords(const std::string &inputText, char delimiter, bool keepEmpty);
+        std::vector<std::string> splitIntoWords(const std::string &inputText, const char &delimiter = ' ', bool keepEmpty = false);
 
         // Helper function to strip punctuation from string
         // Returns new string
         std::string stripPunctuation(const std::string &inputWord);
+
+        // Helper
+        // Check whether some words of the input are fully capitalised
+        template <class T>
+        bool allCapDifferential(const T &input);
   };
 
   /* 
   SentiText member implementations
   */
+
+  template <class T>
+  bool SentiText::allCapDifferential(const T &input)
+  {
+    bool isDifferent = false;
+    size_t allCapWords = 0;
+    for (auto &word : input)
+    {
+      for (size_t idx = 0; idx != word.size(); ++idx)
+      {
+        if (fullyUppercase(word))
+          ++allCapWords;
+      }
+    }
+    int capDifferential = input.size() - allCapWords;
+    if (0 < capDifferential < input.size())
+      isDifferent = true;
+    return isDifferent;
+  }
 
   std::string SentiText::stripPunctuation(const std::string &inputWord)
   {
@@ -310,7 +243,7 @@ namespace vader
     return result;
   }
 
-  std::vector<std::string> SentiText::splitIntoWords(const std::string &inputText, char delimiter = ' ', bool keepEmpty = false)
+  std::vector<std::string> SentiText::splitIntoWords(const std::string &inputText, const char &delimiter, bool keepEmpty)
   {
     std::vector<std::string> wordList;
     std::stringstream ss(inputText);
@@ -408,11 +341,90 @@ namespace vader
       // Note that this implementation may result in different outcomes from the original. Should be tested.
       void replaceStringInPlace(std::string &subject, const std::string &search, const std::string &replace, bool surroundWithSpaces = true);
 
+      // Helper
+      // Check if a certain word increase, decrease or negate valence
+      double scalarChange(const std::string &word, double valence, bool capDifferent);
+
+      // Normalise the score to be between -1 and 1 using an alpha that approximates the max expected value
+      double normalise(double score, double alpha = 15);
+
+      // Determine if the input contains negation words
+      // Needs to use premade lowercase container to be efficient
+      template <class T>
+      bool negated(const T &input, bool includeNT = true);
+
+      // Helper function to strip leading and trailing spaces
+      std::string strip(const std::string &input);
+
   };
 
   // ----------------------------------------------------------
   // SentimentIntensityAnalyser member function implementations
   // ----------------------------------------------------------
+
+  inline std::string SentimentIntensityAnalyser::strip(const std::string &input)
+  {
+    auto start_it = input.begin();
+    auto end_it = input.rbegin();
+    while (std::isspace(*start_it))
+        ++start_it;
+    while (std::isspace(*end_it))
+        ++end_it;
+    return std::string(start_it, end_it.base());
+  }
+
+  template <class T>
+  inline bool SentimentIntensityAnalyser::negated(const T &input, bool includeNT)
+  {
+    std::vector<std::string> inputWords;
+    for (auto &el : input) // WEIRD
+    {
+      inputWords.push_back(lower(input));
+    }
+    for (size_t idx = 0; idx != inputWords.size(); ++idx)
+    {
+      if (std::find(negateWords.begin(), negateWords.end(), inputWords.at(idx)) != negateWords.end())
+        return true;
+      if (includeNT && (inputWords.at(idx).find("n't") != std::string::npos))
+        return true;
+      // if (idx > 0 && inputWords.at(idx) == "least" && inputWords.at(idx - 1) != "at") // Commented out in the original
+      //   return true;
+    }
+    return false;
+  }
+
+  inline double SentimentIntensityAnalyser::normalise(double score, double alpha)
+  {
+    double normalisedScore = score / std::sqrt((score * score) + alpha);
+
+    if (normalisedScore < -1.0)
+      return -1.0;
+    else if (normalisedScore > 1.0)
+      return 1.0;
+    else
+      return normalisedScore;
+  }
+
+  inline double SentimentIntensityAnalyser::scalarChange(const std::string &word, double valence, bool capDifferent)
+  {
+    double scalar = 0.0;
+    std::string wordLower = lower(word);
+    // If word is in booster dictionary
+    if (boosterDict.contains(wordLower)) // Needs testing. Expected behaviour likely.
+    {
+      scalar = boosterDict.at(wordLower);
+      if (valence < 0)
+        scalar *= -1;
+      if (fullyUppercase(word) && capDifferent)
+      {
+        if (valence > 0)
+          scalar += capsIncr;
+        else
+          scalar -= capsIncr;
+      }
+    }
+    return scalar;
+  }
 
   inline std::vector<std::string> SentimentIntensityAnalyser::createLowercaseContainer (const std::vector<std::string> &wordsAndEmoticons)
   {
@@ -466,7 +478,6 @@ namespace vader
     return valence;
   }
 
-
   inline double SentimentIntensityAnalyser::negationCheck(double &valence, const std::vector<std::string> &wordsAndEmoticonsLower, size_t startIdx, size_t idx)
   {
     switch (startIdx)
@@ -479,30 +490,29 @@ namespace vader
       }
       case 1:
       {
-        if (wordsAndEmoticonsLower[idx - 2] == "never" && (wordsAndEmoticonsLower[idx - 1] == "so" || wordsAndEmoticonsLower[idx - 1] == "this"))
+        if (wordsAndEmoticonsLower.at(idx - 2) == "never" && (wordsAndEmoticonsLower.at(idx - 1) == "so" || wordsAndEmoticonsLower.at(idx - 1) == "this"))
           valence *= 1.25;
-        else if (wordsAndEmoticonsLower[idx - 2] == "without" && wordsAndEmoticonsLower[idx - 1] == "doubt")
+        else if (wordsAndEmoticonsLower.at(idx - 2) == "without" && wordsAndEmoticonsLower.at(idx - 1) == "doubt")
           valence = valence; // Superfluous?
-        else if (negated(wordsAndEmoticonsLower[idx - (startIdx + 1)])) // 2 words preceding the lexicon word position
+        else if (negated(wordsAndEmoticonsLower.at(idx - (startIdx + 1)))) // 2 words preceding the lexicon word position
           valence *= nScalar;
         break;
       }
       case 2: // Again, huge mess:
       {
-        if (wordsAndEmoticonsLower[idx - 3] == "never" 
-            && (wordsAndEmoticonsLower[idx - 2] == "so" || wordsAndEmoticonsLower[idx - 2] == "this") 
-            || (wordsAndEmoticonsLower[idx - 1] == "so" || wordsAndEmoticonsLower[idx - 1] == "this"))
+        if (wordsAndEmoticonsLower.at(idx - 3) == "never" 
+            && (wordsAndEmoticonsLower.at(idx - 2) == "so" || wordsAndEmoticonsLower.at(idx - 2) == "this") 
+            || (wordsAndEmoticonsLower.at(idx - 1) == "so" || wordsAndEmoticonsLower.at(idx - 1) == "this"))
           valence *= 1.25;
-        else if (wordsAndEmoticonsLower[idx - 3] == "without" && (wordsAndEmoticonsLower[idx - 2] == "doubt" || wordsAndEmoticonsLower[idx - 1] == "doubt"))
+        else if (wordsAndEmoticonsLower.at(idx - 3) == "without" && (wordsAndEmoticonsLower.at(idx - 2) == "doubt" || wordsAndEmoticonsLower.at(idx - 1) == "doubt"))
           valence = valence; // Superfluous?
-        else if (negated(wordsAndEmoticonsLower[idx - (startIdx + 1)])) // Not sure what the bracket situation in the original is here
+        else if (negated(wordsAndEmoticonsLower.at(idx - (startIdx + 1)))) // Not sure what the bracket situation in the original is here
           valence *= nScalar;
         break;
       }
     }
     return valence;
   }
-
 
   inline const std::vector<double> SentimentIntensityAnalyser::sentimentValence(double &valence, const SentiText &localSenti, const std::vector<std::string> &wordsAndEmoticonsLower, const std::string &item, size_t idx, std::vector<double> &sentiments)
   {
@@ -513,7 +523,7 @@ namespace vader
     {
       valence = lexDictionary.at(itemLower); // Get sentiment valence
       // Check for "no" as negation for an adjacent lexicon item vs "no" as its own stand-alone lexicon item
-      if (itemLower == "no" && idx != (wordsAndEmoticons.size() - 1) && isIn(lexDictionary, lower(wordsAndEmoticons[idx +1])))
+      if (itemLower == "no" && idx != (wordsAndEmoticons.size() - 1) && isIn(lexDictionary, lower(wordsAndEmoticons.at(idx +1))))
       {
         // Don't use valence of "no" as a lexicon item. Instead set it's valence to 0.0 and negate the next item
         valence = 0;
@@ -521,10 +531,10 @@ namespace vader
       // This is a mess \/
       if 
       (
-        (idx > 0 && lower(wordsAndEmoticons[idx - 1]) == "no") 
-        || (idx > 1 && lower(wordsAndEmoticons[idx - 2]) == "no")
-        || (idx > 2 && lower(wordsAndEmoticons[idx - 3]) == "no" 
-                    && (lower(wordsAndEmoticons[idx - 1]) == "or" || lower(wordsAndEmoticons[idx - 1]) == "nor"))
+        (idx > 0 && lower(wordsAndEmoticons.at(idx - 1)) == "no") 
+        || (idx > 1 && lower(wordsAndEmoticons.at(idx - 2)) == "no")
+        || (idx > 2 && lower(wordsAndEmoticons.at(idx - 3)) == "no" 
+                    && (lower(wordsAndEmoticons.at(idx - 1)) == "or" || lower(wordsAndEmoticons.at(idx - 1)) == "nor"))
       )
         valence = lexDictionary.at(itemLower) * nScalar;
 
@@ -542,9 +552,9 @@ namespace vader
       // on their distance from the current item.
       for (size_t startIdx = 0; startIdx != 3; ++startIdx)
       {
-        if (idx > startIdx && !isIn(lexDictionary, lower(wordsAndEmoticons[idx - (startIdx + 1)])))
+        if (idx > startIdx && !isIn(lexDictionary, lower(wordsAndEmoticons.at(idx - (startIdx + 1)))))
         {
-          double s = scalarChange(wordsAndEmoticons[idx - (startIdx + 1)], valence, isCapDifferent);
+          double s = scalarChange(wordsAndEmoticons.at(idx - (startIdx + 1)), valence, isCapDifferent);
           if (startIdx == 1 && s != 0)
             s *= 0.95;
           if (startIdx == 2 && s != 0)
@@ -603,9 +613,9 @@ namespace vader
     {
       size_t butIndex = std::distance(wordsAndEmoticonsLower.begin(), butLocation);
       for (size_t idx = 0; idx != butIndex; ++idx)
-        sentiments[idx] *= 0.5;
+        sentiments.at(idx) *= 0.5;
       for (size_t idx = butIndex + 1; idx != sentiments.size(); ++idx)
-        sentiments[idx] *= 1.5;
+        sentiments.at(idx) *= 1.5;
     }
     return sentiments;
   }
@@ -613,12 +623,12 @@ namespace vader
   // This function feels like it has a lot of redundancies in it, but is true to the original
   inline double SentimentIntensityAnalyser::leastCheck(double &valence, const std::vector<std::string> &wordsAndEmoticonsLower, size_t idx)
   {
-    if (idx > 1 && !isIn(this->lexDictionary, wordsAndEmoticonsLower[idx - 1]) && wordsAndEmoticonsLower[idx - 1] == "least")
+    if (idx > 1 && !isIn(this->lexDictionary, wordsAndEmoticonsLower.at(idx - 1)) && wordsAndEmoticonsLower.at(idx - 1) == "least")
     {
-      if (wordsAndEmoticonsLower[idx - 2] != "at" && wordsAndEmoticonsLower[idx - 2] != "very")
+      if (wordsAndEmoticonsLower.at(idx - 2) != "at" && wordsAndEmoticonsLower.at(idx - 2) != "very")
         valence *= nScalar;
     }
-    else if (idx > 0 && !isIn(this->lexDictionary, wordsAndEmoticonsLower[idx - 1]) && wordsAndEmoticonsLower[idx - 1] == "least")
+    else if (idx > 0 && !isIn(this->lexDictionary, wordsAndEmoticonsLower.at(idx - 1)) && wordsAndEmoticonsLower.at(idx - 1) == "least")
       valence *= nScalar;
     return valence;
   }
@@ -693,7 +703,6 @@ namespace vader
     return std::make_tuple(posSum, negSum, neuCount);
   }
 
-
   inline SentimentDict SentimentIntensityAnalyser::scoreValence(const std::vector<double> &sentiments, const std::string &text)
   {
     double pos = 0, neg = 0, neu = 0, compound = 0;
@@ -749,7 +758,6 @@ namespace vader
 
     std::vector<double> sentiments;
 
-
     for (size_t idx = 0; idx != wordsAndEmoticons.size(); ++idx)
     {
       double valence = 0;
@@ -773,4 +781,5 @@ namespace vader
     return valenceDictionary;
   }
 }
+
 #endif // INCLUDE_CPPVADER_HPP_
