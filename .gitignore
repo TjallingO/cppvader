@@ -1,7 +1,7 @@
 development/
 .vscode/
-googletest/
 trash/
 *.gch
 *.o
 *.sh
+*.py
