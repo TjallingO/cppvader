@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
+    branches:
+      - master
 
 jobs:
   benchmark:
@@ -12,20 +15,6 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build and run benchmarks with Catch2
         run: |
-          cd test
-          g++-10 -std=c++20 -o outcomeTests.o outcomeTests.cc
-          ./outcomeTests.o | tee ../benchmark_result.txt
-      - name: Store benchmark result
-        uses: rhysd/github-action-benchmark@v1
-        with:
-          name: Catch2 Benchmark
-          tool: "catch2"
-          output-file-path: examples/catch2/benchmark_result.txt
-          # Use personal access token instead of GITHUB_TOKEN due to https://github.community/t5/GitHub-Actions/Github-action-not-triggering-gh-pages-upon-push/td-p/26869/highlight/false
-          github-token: ${{ GITHUB_TOKEN }}
-          auto-push: true
-          # Show alert with commit comment on detecting possible performance regression
-          alert-threshold: "200%"
-          comment-on-alert: true
-          fail-on-alert: true
-          alert-comment-cc-users: "@tjallingo"
+          echo g++-v --version
+          g++-10 -std=c++20 -o ./test/outcomeTests.o ./test/outcomeTests.cc
+          ./test/outcomeTests.o
