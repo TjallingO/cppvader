@@ -19,7 +19,7 @@ Failed cases:
 | Sentence | Outcome | Expected |
 | :------- | :-----: | :------: |
 | Today only kinda sux! But I'll get by, lol | **0.2966**, **0.3625**, **0.3409**, **0.4086** | **0.127**, **0.556**, **0.317**, **0.5249** |
-| Make sure you :) or :D today!              | 0.0, 0.2786, **0.7214**, **0.8849**            | 0.0, **0.294**, **0.706**, 0.8633           |
+| Make sure you :) or :D today!              | 0.0, **0.2786**, **0.7214**, 0.8849            | 0.0, **0.294**, **0.706**, 0.8633           |
 
     
 ## Minimal working example
