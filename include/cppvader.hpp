@@ -185,32 +185,32 @@ namespace vader
       // Constructors
       SentiText() = delete;
       SentiText(const std::string &inputText)
-               : text(inputText)
-               , listOfWordsAndEmoticons{wordsAndEmoticons(inputText)}
+               : listOfWordsAndEmoticons{wordsAndEmoticons(inputText)}
                , isCapitalisationDifferent{allCapDifferential(listOfWordsAndEmoticons)}
+               , text(inputText)
       {}
 
-      private:
-        const std::string text;
-        // Splits text into tokens. Leaves contractions and most emoticons.
-        // (Unfortunately, not punctuation + letter ones like :D)
-        std::vector<std::string> wordsAndEmoticons(const std::string &inputText);
+    private:
+      const std::string text;
+      // Splits text into tokens. Leaves contractions and most emoticons.
+      // (Unfortunately, not punctuation + letter ones like :D)
+      std::vector<std::string> wordsAndEmoticons(const std::string &inputText);
 
-        // Remove leading and trailing punctuation unless len <= 2, in which case it is likely an emoticon
-        std::string stripPunctuationIfWord(const std::string &token);
+      // Remove leading and trailing punctuation unless len <= 2, in which case it is likely an emoticon
+      std::string stripPunctuationIfWord(const std::string &token);
 
-        // Helper function to split string into words.
-        // Note that setting keepEmpty to false also handles multiple consecutive delimiters.
-        std::vector<std::string> splitIntoWords(const std::string &inputText, const char &delimiter = ' ', bool keepEmpty = false);
+      // Helper function to split string into words.
+      // Note that setting keepEmpty to false also handles multiple consecutive delimiters.
+      std::vector<std::string> splitIntoWords(const std::string &inputText, const char &delimiter = ' ', bool keepEmpty = false);
 
-        // Helper function to strip punctuation from string
-        // Returns new string
-        std::string stripPunctuation(const std::string &inputWord);
+      // Helper function to strip punctuation from string
+      // Returns new string
+      std::string stripPunctuation(const std::string &inputWord);
 
-        // Helper
-        // Check whether some words of the input are fully capitalised
-        template <class T>
-        bool allCapDifferential(const T &input);
+      // Helper
+      // Check whether some words of the input are fully capitalised
+      template <class T>
+      bool allCapDifferential(const T &input);
   };
 
   /* 
@@ -239,7 +239,7 @@ namespace vader
   std::string SentiText::stripPunctuation(const std::string &inputWord)
   {
     std::string result;
-    std::remove_copy_if(inputWord.begin(), inputWord.end(), std::back_inserter(result), std::ptr_fun<int, int>(&std::ispunct));
+    remove_copy_if(begin(inputWord), end(inputWord), back_inserter(result), [] (char c) { return ispunct(c); });
     return result;
   }
 
@@ -410,7 +410,7 @@ namespace vader
     double scalar = 0.0;
     std::string wordLower = lower(word);
     // If word is in booster dictionary
-    if (boosterDict.contains(wordLower)) // Needs testing. Expected behaviour likely.
+    if (isIn(boosterDict, wordLower)) // Needs testing. Expected behaviour likely.
     {
       scalar = boosterDict.at(wordLower);
       if (valence < 0)
@@ -470,7 +470,7 @@ namespace vader
 
     // Check for booster/damepener bi-grams such as 'sort of' or 'kind of'
     const std::vector<std::string> nGrams = {threeTwoOne, threeTwo, twoOne}; // Avoid copying?
-    for (auto &nGram : nGrams)
+    for (auto &nGram : nGrams) // Perhaps this is where the error is.
     {
       if (isIn(boosterDict, nGram))
         valence += boosterDict.at(nGram);
@@ -745,6 +745,9 @@ namespace vader
 
   inline SentimentDict SentimentIntensityAnalyser::polarityScores(const std::string &inputText)
   {
+    // Convert emojis to textual descriptions
+    // Note that emojis are not single chars, so an alternative to the original is needed.
+    // Not sure if this is the best option.
     std::string textWithoutEmojis = inputText;
     bool prevSpace = true;
     for (auto &emojiEntry : emojiDictionary) // Not sure if this is efficient
