@@ -2,10 +2,10 @@ name: Test and benchmark
 on:
   push:
     branches:
-      - master
+      - main
   workflow_dispatch:
     branches:
-      - master
+      - main
 
 jobs:
   benchmark:
