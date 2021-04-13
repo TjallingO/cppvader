@@ -373,25 +373,37 @@ namespace vader
     return std::string(start_it, end_it.base());
   }
 
+  // template <class T>
+  // inline bool SentimentIntensityAnalyser::negated(const T &input, bool includeNT)
+  // {
+  //   std::vector<std::string> inputWords;
+  //   for (auto &el : input) // WEIRD
+  //   {
+  //     inputWords.push_back(lower(input));
+  //   }
+  //   for (size_t idx = 0; idx != inputWords.size(); ++idx)
+  //   {
+  //     if (std::find(negateWords.begin(), negateWords.end(), inputWords.at(idx)) != negateWords.end())
+  //       return true;
+  //     if (includeNT && (inputWords.at(idx).find("n't") != std::string::npos))
+  //       return true;
+  //     // if (idx > 0 && inputWords.at(idx) == "least" && inputWords.at(idx - 1) != "at") // Commented out in the original
+  //     //   return true;
+  //   }
+  //   return false;
+  // }
+
   template <class T>
   inline bool SentimentIntensityAnalyser::negated(const T &input, bool includeNT)
   {
-    std::vector<std::string> inputWords;
-    for (auto &el : input) // WEIRD
-    {
-      inputWords.push_back(lower(input));
-    }
-    for (size_t idx = 0; idx != inputWords.size(); ++idx)
-    {
-      if (std::find(negateWords.begin(), negateWords.end(), inputWords.at(idx)) != negateWords.end())
-        return true;
-      if (includeNT && (inputWords.at(idx).find("n't") != std::string::npos))
-        return true;
-      // if (idx > 0 && inputWords.at(idx) == "least" && inputWords.at(idx - 1) != "at") // Commented out in the original
-      //   return true;
-    }
+    if (std::find(begin(negateWords), end(negateWords), input) != end(negateWords))
+      return true;
+    if (includeNT && input.find("n't") != std::string::npos)
+      return true;
+
     return false;
   }
+
 
   inline double SentimentIntensityAnalyser::normalise(double score, double alpha)
   {
