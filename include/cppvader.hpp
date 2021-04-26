@@ -16,7 +16,6 @@
 
 // TODO LIST
 // - Change most lower() usages to use pre-made lower container
-// - Text emoticions (e.g. :D) are not calculated properly. Investigate.
 // - Perhaps some free functions should be class members.
 
 namespace vader
@@ -156,16 +155,30 @@ namespace vader
 
     // Helper function to check capitalisation word
     // Required by both SentiText and SentimentIntensityAnalyser
+    // This matches Python's isupper() implementation in that
+    // it returns true only if all its alpha characters are
+    // capitalised, of which there should be at least one.
+    // https://github.com/python/cpython/blob/dec075754960dd85972ce5170df76e862f966132/Objects/bytes_methods.c#L218
     bool fullyUppercase(const std::string &word)
     {
+      // Special case: strings of length 1
+      if (word.length() == 1)
+        return ::isupper(word.at(0));
+
+      // Special case: empty string
       if (word.empty()) // Not sure if this is desired behaviour
         return false;
+
+      bool cased = false;
+
       for (auto &character : word)
       {
         if (::islower(character))
           return false;
+        else if (!cased && ::isupper(character))
+          cased = true;
       }
-      return true;
+      return cased;
     }
   } // End anonymous namespace
 
@@ -224,15 +237,16 @@ namespace vader
     size_t allCapWords = 0;
     for (auto &word : input)
     {
-      for (size_t idx = 0; idx != word.size(); ++idx)
-      {
-        if (fullyUppercase(word))
-          ++allCapWords;
-      }
+      if (fullyUppercase(word))
+        ++allCapWords;
     }
     int capDifferential = input.size() - allCapWords;
-    if (0 < capDifferential < input.size())
+
+    // In Python, (x < y < z) represents very different logic
+    // than it would in C++.
+    if ((0 < capDifferential) && (capDifferential < input.size()))
       isDifferent = true;
+    
     return isDifferent;
   }
 
@@ -761,7 +775,7 @@ namespace vader
     // Note that emojis are not single chars, so an alternative to the original is needed.
     // Not sure if this is the best option.
     std::string textWithoutEmojis = inputText;
-    bool prevSpace = true;
+    // bool prevSpace = true; // No longer required
     for (auto &emojiEntry : emojiDictionary) // Not sure if this is efficient
       replaceStringInPlace(textWithoutEmojis, emojiEntry.first, emojiEntry.second, true);
     std::string text = strip(textWithoutEmojis);
