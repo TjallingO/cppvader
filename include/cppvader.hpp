@@ -1,8 +1,6 @@
 #ifndef INCLUDE_CPPVADER_HPP_
 #define INCLUDE_CPPVADER_HPP_
 
-#define GOT_HERE std::cout << std::endl << "--> Got to " <<__func__ << ":" << __LINE__ << std::endl
-
 #include <map>
 #include <set>
 #include <vector>
@@ -252,9 +250,21 @@ namespace vader
 
   std::string SentiText::stripPunctuation(const std::string &inputWord)
   {
-    std::string result;
-    remove_copy_if(begin(inputWord), end(inputWord), back_inserter(result), [] (char c) { return ispunct(c); });
-    return result;
+    // Old implementation (also removes punctuation mid-string)
+    // std::string result;
+    // remove_copy_if(begin(inputWord), end(inputWord), back_inserter(result), [] (char c) { return ispunct(c); });
+    // return result;
+
+    auto leftBound = inputWord.begin();
+    auto rightBound = inputWord.rbegin();
+    while (std::ispunct(*leftBound))
+        ++leftBound;
+    if (leftBound == inputWord.end())
+      return std::string("");
+    while (std::ispunct(*rightBound))
+        ++rightBound;
+
+    return std::string(leftBound, rightBound.base());
   }
 
   std::vector<std::string> SentiText::splitIntoWords(const std::string &inputText, const char &delimiter, bool keepEmpty)
@@ -280,6 +290,8 @@ namespace vader
     return splitAndTrimmedWords;
   }
 
+  // This is the problem. Python's strip only removes leading and trailing
+  // punctuation.
   std::string SentiText::stripPunctuationIfWord(const std::string &token)
   {
     std::string strippedWord = stripPunctuation(token);
@@ -637,6 +649,7 @@ namespace vader
     const auto butLocation = std::find(wordsAndEmoticonsLower.begin(), wordsAndEmoticonsLower.end(), "but");
     if (butLocation != wordsAndEmoticonsLower.end())
     {
+      // Bisect around 'but'
       size_t butIndex = std::distance(wordsAndEmoticonsLower.begin(), butLocation);
       for (size_t idx = 0; idx != butIndex; ++idx)
         sentiments.at(idx) *= 0.5;
@@ -676,7 +689,14 @@ namespace vader
       std::stringstream lineStream(line);
       std::getline(lineStream, entry, '\t');
       std::getline(lineStream, sMeasure, '\t');
-      lexDictionary.insert( {entry, stod(sMeasure)} );
+
+      // Workaround
+      // This is required because Python overwrites duplicate entries
+      // with a new value.
+      if (lexDictionary.contains(entry))
+        lexDictionary.at(entry) = stod(sMeasure);
+      else
+        lexDictionary.insert( {entry, stod(sMeasure)} );
     }
     if (lexDictionary.empty())
     {
@@ -804,7 +824,6 @@ namespace vader
       sentiments = sentimentValence(valence, interSentiText, wordsAndEmoticonsLower, wordsAndEmoticons.at(idx), idx, sentiments);
     }
     sentiments = butCheck(wordsAndEmoticonsLower, sentiments);
-
     SentimentDict valenceDictionary = scoreValence(sentiments, text);
 
     return valenceDictionary;
