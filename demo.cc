@@ -18,7 +18,6 @@ int main()
     "The book was good.",  // positive sentence
     "At least it isn't a horrible book.",  // negated negative sentence with contraction
     "The book was only kind of good.",                 // qualified positive sentence is handled correctly (intensity adjusted)
-    "lol",
     "The plot was good, but the characters are uncompelling and the dialog is not great.",                 // mixed negation sentence
     "Today SUX!",  // negative slang with capitalization emphasis
     "Today only kinda sux! But I'll get by, lol",                  // mixed sentiment example with slang and constrastive conjunction "but"
